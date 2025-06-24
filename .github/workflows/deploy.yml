@@ -23,43 +23,43 @@ jobs:
           script: |
             sudo mkdir -p /opt
             sudo bash -c 'cat > /opt/deploy.sh' << 'EOF'
-#!/bin/bash
-set -e
+            #!/bin/bash
+            set -e
 
-echo "🔧 Installing dependencies..."
-sudo apt update -y
-sudo apt install -y openjdk-11-jdk wget unzip curl
+            echo "🔧 Installing dependencies..."
+            sudo apt update -y
+            sudo apt install -y openjdk-11-jdk wget unzip curl
 
-echo "📦 Downloading and installing Tomcat 10.1.18..."
-cd /opt
-if [ -d "/opt/tomcat" ]; then
-  sudo rm -rf /opt/tomcat
-fi
-wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
-tar -xvzf apache-tomcat-10.1.18.tar.gz
-mv apache-tomcat-10.1.18 tomcat
-chmod +x /opt/tomcat/bin/*.sh
+            echo "📦 Downloading and installing Tomcat 10.1.18..."
+            cd /opt
+            if [ -d "/opt/tomcat" ]; then
+              sudo rm -rf /opt/tomcat
+            fi
+            wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
+            tar -xvzf apache-tomcat-10.1.18.tar.gz
+            mv apache-tomcat-10.1.18 tomcat
+            chmod +x /opt/tomcat/bin/*.sh
 
-echo "🧹 Cleaning previous deployment..."
-cd /opt/tomcat/webapps
-rm -rf ROOT ROOT.zip temp_root
-mkdir -p temp_root
+            echo "🧹 Cleaning previous deployment..."
+            cd /opt/tomcat/webapps
+            rm -rf ROOT ROOT.zip temp_root
+            mkdir -p temp_root
 
-echo "📥 Downloading ROOT.zip from GitHub..."
-wget -O ROOT.zip https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip
+            echo "📥 Downloading ROOT.zip from GitHub..."
+            wget -O ROOT.zip https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip
 
-echo "📂 Extracting WAR from ROOT.zip..."
-unzip ROOT.zip -d temp_root
-mkdir -p ROOT
-cd ROOT
-jar -xvf ../temp_root/ROOT.war
+            echo "📂 Extracting WAR from ROOT.zip..."
+            unzip ROOT.zip -d temp_root
+            mkdir -p ROOT
+            cd ROOT
+            jar -xvf ../temp_root/ROOT.war
 
-echo "♻️ Restarting Tomcat..."
-/opt/tomcat/bin/shutdown.sh || true
-sleep 3
-/opt/tomcat/bin/startup.sh
+            echo "♻️ Restarting Tomcat..."
+            /opt/tomcat/bin/shutdown.sh || true
+            sleep 3
+            /opt/tomcat/bin/startup.sh
 
-echo "✅ Deployment complete at $(date)"
-EOF
+            echo "✅ Deployment complete at $(date)"
+            EOF
             sudo chmod +x /opt/deploy.sh
             sudo /opt/deploy.sh
