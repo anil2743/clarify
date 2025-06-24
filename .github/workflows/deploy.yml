@@ -1,28 +1,25 @@
-name: Deploy with Terraform
+name: 🚀 CI/CD Deploy Java WebApp to EC2
 
 on:
   push:
     branches:
-      - master
+      - master  # or 'master' if your default branch is master
 
 jobs:
   deploy:
+    name: Deploy WAR to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: 🔁 Checkout Code
+        uses: actions/checkout@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init
-        run: terraform init
-        working-directory: terraform
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-        working-directory: terraform
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: 🔐 Deploy via SSH to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "⚙️ Running deploy.sh..."
+            sudo bash /opt/deploy.sh

@@ -24,33 +24,44 @@ resource "aws_security_group" "allow_ssh_http" {
 }
 
 resource "aws_instance" "web" {
-  ami                    = "ami-0f5ee92e2d63afc18"
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  security_groups        = [aws_security_group.allow_ssh_http.name]
+  ami           = "ami-0f5ee92e2d63afc18"
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  security_groups = [aws_security_group.allow_ssh_http.name]
 
-  user_data_replace_on_change = true
   user_data = <<-EOF
               #!/bin/bash
-              set -e  # Exit script on error
+              set -e
 
               apt update -y
               apt install -y openjdk-11-jdk wget unzip curl
 
               cd /opt
-              wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.83/bin/apache-tomcat-9.0.83.tar.gz
-              tar -xvzf apache-tomcat-9.0.83.tar.gz
-              mv apache-tomcat-9.0.83 tomcat
+              wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
+              tar -xvzf apache-tomcat-10.1.18.tar.gz
+              mv apache-tomcat-10.1.18 tomcat
               chmod +x /opt/tomcat/bin/*.sh
 
-              # Download WAR
-              wget https://github.com/anil2743/clarify/releases/latest/download/ROOT.war -O /opt/tomcat/webapps/ROOT.war
+              # Add deployment script
+              cat << 'EOS' > /opt/deploy.sh
+              #!/bin/bash
+              set -e
 
-              # Start Tomcat in background
+              rm -rf /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/ROOT.zip /opt/tomcat/webapps/temp_root
+              wget https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip -O /opt/tomcat/webapps/ROOT.zip
+              mkdir /opt/tomcat/webapps/temp_root
+              unzip /opt/tomcat/webapps/ROOT.zip -d /opt/tomcat/webapps/temp_root
+              mkdir /opt/tomcat/webapps/ROOT
+              cd /opt/tomcat/webapps/ROOT
+              jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
+              /opt/tomcat/bin/shutdown.sh || true
+              sleep 3
               /opt/tomcat/bin/startup.sh
+              echo "Deployed via CI/CD" >> /opt/deploy.log
+              EOS
 
-              # Write status to log
-              echo "Tomcat started!" >> /var/log/tomcat-setup.log
+              chmod +x /opt/deploy.sh
+              bash /opt/deploy.sh
               EOF
 
   tags = {
@@ -62,6 +73,7 @@ resource "aws_instance" "web" {
   }
 }
 
-resource "aws_eip" "web_eip" {
-  instance = aws_instance.web.id
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.web.id
+  allocation_id = "eipalloc-06cff5573d269a0c4"
 }
