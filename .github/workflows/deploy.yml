@@ -46,20 +46,20 @@ else
   echo "✅ Tomcat already installed."
 fi
 
-echo "📦 Deploying WAR..."
+echo " M-& Deploying WAR..."
 mkdir -p $TOMCAT_DIR/webapps/temp_root
 rm -rf $TOMCAT_DIR/webapps/ROOT $TOMCAT_DIR/webapps/ROOT.zip $TOMCAT_DIR/webapps/temp_root
 
-echo "📥 Downloading ROOT.zip..."
+echo " M-% Downloading ROOT.zip..."
 wget -O $TOMCAT_DIR/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
-echo "📂 Extracting WAR..."
+echo " ~B Extracting WAR..."
 unzip $TOMCAT_DIR/webapps/ROOT.zip -d $TOMCAT_DIR/webapps/temp_root
 mkdir -p $TOMCAT_DIR/webapps/ROOT
 cd $TOMCAT_DIR/webapps/ROOT
 jar -xvf $TOMCAT_DIR/webapps/temp_root/ROOT.war
 
-echo "🔁 Restarting Tomcat..."
+echo " ~A Restarting Tomcat..."
 $TOMCAT_DIR/bin/shutdown.sh || true
 sleep 3
 $TOMCAT_DIR/bin/startup.sh
