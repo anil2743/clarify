@@ -30,7 +30,7 @@ jobs:
             set -e
 
             TOMCAT_DIR="/opt/tomcat"
-            TOMCAT_VERSION="10.1.27"
+            TOMCAT_VERSION="10.1.18"
 
             if [ ! -x "\$TOMCAT_DIR/bin/startup.sh" ]; then
               echo "⚙️ Tomcat not found, installing..."
