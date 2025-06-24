@@ -8,8 +8,30 @@
   <version>0.0.1-SNAPSHOT</version>
   <packaging>war</packaging>
 
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <!-- ✅ Jakarta Servlet API for Tomcat 10 -->
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <version>5.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- ✅ org.json for JSONObject and JSONArray -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20230227</version>
+    </dependency>
+  </dependencies>
+
   <build>
-    <finalName>ROOT</finalName> <!-- ✅ WAR will be named ROOT.war -->
+    <finalName>ROOT</finalName>
 
     <plugins>
       <plugin>
