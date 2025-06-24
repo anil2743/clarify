@@ -36,9 +36,9 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "deploy/ROOT.zip"
-          target: "deploy/" # ✅ uploads to /home/ubuntu/deploy/
+          target: "deploy/"   # ✅ relative = /home/ubuntu/deploy
 
-      - name: ⚙️ SSH and Deploy
+      - name: ⚙️ SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
