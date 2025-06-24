@@ -37,7 +37,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "deploy/ROOT.zip"
-          target: "/opt/"
+          target: "/home/ubuntu/"
 
       - name: SSH into EC2 and deploy WAR
         uses: appleboy/ssh-action@v1.0.3
@@ -49,11 +49,14 @@ jobs:
             set -e
             echo "✅ Starting remote deployment..."
 
-            # Install Java and other tools if missing
+            # Move uploaded ZIP to /opt
+            sudo mv /home/ubuntu/ROOT.zip /opt/ROOT.zip
+
+            # Install Java and tools if needed
             sudo apt update -y
             sudo apt install -y openjdk-11-jdk wget unzip curl
 
-            # Setup Tomcat
+            # Install Tomcat if not already
             if [ ! -d /opt/tomcat ]; then
               echo "⬇️ Installing Tomcat..."
               cd /opt
@@ -63,18 +66,20 @@ jobs:
               chmod +x /opt/tomcat/bin/*.sh
             fi
 
-            # Deploy WAR
+            # Clean previous deployment and extract new WAR
             echo "📦 Deploying WAR..."
             cd /opt/tomcat/webapps
-            rm -rf ROOT ROOT.zip temp_root
-            unzip /opt/ROOT.zip -d temp_root
-            mkdir -p ROOT
+            sudo rm -rf ROOT temp_root
+            sudo mkdir -p temp_root
+            sudo unzip /opt/ROOT.zip -d temp_root
+            sudo mkdir -p ROOT
             cd ROOT
-            jar -xvf ../temp_root/ROOT.war
+            sudo jar -xvf ../temp_root/ROOT.war
 
+            # Restart Tomcat
             echo "♻️ Restarting Tomcat..."
-            /opt/tomcat/bin/shutdown.sh || true
+            sudo /opt/tomcat/bin/shutdown.sh || true
             sleep 3
-            /opt/tomcat/bin/startup.sh
+            sudo /opt/tomcat/bin/startup.sh
 
             echo "✅ Deployment complete at $(date)"
