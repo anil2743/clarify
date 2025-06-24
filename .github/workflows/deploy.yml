@@ -21,11 +21,11 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo " ~A Creating /opt..."
+            echo " ~A Creating /opt directory..."
             sudo mkdir -p /opt
 
-            echo " ~\\ Creating deploy.sh..."
-            sudo bash -c 'cat > /opt/deploy.sh' << 'EOSCRIPT'
+            echo " ~\\ Creating deploy.sh script..."
+            sudo bash -c 'cat << "EOF" > /opt/deploy.sh
 #!/bin/bash
 set -e
 
@@ -33,32 +33,27 @@ TOMCAT_DIR="/opt/tomcat"
 TOMCAT_VERSION="10.1.18"
 
 if [ ! -x "$TOMCAT_DIR/bin/startup.sh" ]; then
-  echo "⚙️ Tomcat not found, installing..."
+  echo "⚙️ Installing Tomcat $TOMCAT_VERSION..."
   cd /opt
   sudo apt update
   sudo apt install -y openjdk-17-jdk wget unzip curl
-
-  echo "⬇️ Downloading Tomcat $TOMCAT_VERSION..."
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-10/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz
   sudo tar -xzf apache-tomcat-$TOMCAT_VERSION.tar.gz
-
-  echo "🚚 Moving to /opt/tomcat..."
-  sudo mv apache-tomcat-$TOMCAT_VERSION "$TOMCAT_DIR"
+  sudo mv apache-tomcat-$TOMCAT_VERSION $TOMCAT_DIR
   sudo chmod +x $TOMCAT_DIR/bin/*.sh
-
-  echo "✅ Tomcat installed."
+  echo "✅ Tomcat $TOMCAT_VERSION installed."
 else
-  echo "✅ Tomcat already installed."
+  echo "✅ Tomcat already exists."
 fi
 
-echo "📦 Preparing deployment..."
+echo "📦 Preparing WAR deployment..."
 mkdir -p $TOMCAT_DIR/webapps/temp_root
 rm -rf $TOMCAT_DIR/webapps/ROOT $TOMCAT_DIR/webapps/ROOT.zip $TOMCAT_DIR/webapps/temp_root
 
-echo "📥 Downloading ROOT.zip..."
+echo "📥 Downloading ROOT.zip from GitHub release..."
 wget -O $TOMCAT_DIR/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
-echo "📂 Extracting WAR..."
+echo "📂 Extracting WAR file..."
 unzip $TOMCAT_DIR/webapps/ROOT.zip -d $TOMCAT_DIR/webapps/temp_root
 mkdir -p $TOMCAT_DIR/webapps/ROOT
 cd $TOMCAT_DIR/webapps/ROOT
@@ -69,9 +64,9 @@ $TOMCAT_DIR/bin/shutdown.sh || true
 sleep 3
 $TOMCAT_DIR/bin/startup.sh
 
-echo "✅ Deployed at $(date)" >> /opt/deploy.log
-EOSCRIPT
+echo "✅ Deployed successfully at $(date)" >> /opt/deploy.log
+EOF'
 
-            echo " ~@ Running deploy.sh..."
+            echo " ~@ Running deploy.sh script..."
             sudo chmod +x /opt/deploy.sh
             sudo bash /opt/deploy.sh
