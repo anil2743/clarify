@@ -1,6 +1,9 @@
 resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
   public_key = file("${path.module}/terraform1.pub")
+  lifecycle {
+    ignore_changes = [public_key]
+  }
 }
 
 resource "aws_security_group" "allow_ssh_http" {
