@@ -33,6 +33,11 @@ jobs:
 
             TOMCAT_DIR="/opt/tomcat"
 
+            if [ ! -f "$TOMCAT_DIR/bin/startup.sh" ]; then
+              echo "❌ Error: Tomcat not installed or startup.sh not found in $TOMCAT_DIR/bin"
+              exit 1
+            fi
+
             echo "📦 Preparing deployment..."
             sudo mkdir -p ${TOMCAT_DIR}/webapps/temp_root
             sudo rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
@@ -47,9 +52,9 @@ jobs:
             sudo jar -xvf ${TOMCAT_DIR}/webapps/temp_root/ROOT.war
 
             echo "♻️ Restarting Tomcat..."
-            sudo ${TOMCAT_DIR}/bin/shutdown.sh || true
+            sudo ${TOMCAT_DIR}/bin/shutdown.sh || echo "Tomcat shutdown failed, continuing..."
             sleep 3
-            sudo ${TOMCAT_DIR}/bin/startup.sh
+            sudo ${TOMCAT_DIR}/bin/startup.sh || { echo "❌ Error: Failed to start Tomcat"; exit 1; }
 
             echo "✅ Deployment completed at $(date)" | sudo tee -a /opt/deploy.log
             EOF
