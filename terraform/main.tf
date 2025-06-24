@@ -29,27 +29,35 @@ resource "aws_instance" "web" {
   key_name      = var.key_name
   security_groups = [aws_security_group.allow_ssh_http.name]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
+user_data = <<-EOF
+            #!/bin/bash
+            set -e
 
-              # Create directories
-              mkdir -p /opt /opt/tomcat/webapps
+            echo "📦 Installing dependencies..."
+            apt update -y
+            apt install -y openjdk-11-jdk wget unzip curl -y
 
-              # Install Java and required tools
-              apt update -y
-              apt install -y openjdk-11-jdk wget unzip curl
+            echo "🔧 Creating required directories..."
+            mkdir -p /opt
+            mkdir -p /opt/tomcat/webapps
+            mkdir -p /opt/tomcat/webapps/temp_root
 
-              # Ensure 'jar' is available
-              ln -s /usr/lib/jvm/java-11-openjdk-amd64/bin/jar /usr/bin/jar || true
+            echo "🔗 Ensuring 'jar' command is available..."
+            ln -sf /usr/lib/jvm/java-11-openjdk-amd64/bin/jar /usr/bin/jar || true
 
-              # Download and extract Apache Tomcat
+            echo "🧰 Checking for Tomcat installation..."
+            if [ ! -f /opt/tomcat/bin/startup.sh ]; then
+              echo "⬇️ Downloading and setting up Tomcat..."
               cd /opt
+              rm -rf tomcat
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xvzf apache-tomcat-10.1.18.tar.gz
-              mv apache-tomcat-10.1.18 /opt/tomcat
+              mv apache-tomcat-10.1.18 tomcat
               chmod +x /opt/tomcat/bin/*.sh
-              EOF
+            else
+              echo "✅ Tomcat already installed, skipping..."
+            fi
+            EOF
   tags = {
     Name = "JavaWebApp"
   }
