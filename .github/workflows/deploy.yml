@@ -23,12 +23,32 @@ jobs:
       - name: 🧱 Build WAR using Maven
         run: mvn clean package -DskipTests
 
-      - name: 📦 Prepare deployable ROOT.zip
+      - name: 🔍 Check Maven Build Output
         run: |
-          mkdir -p build
-          cp target/*.war build/ROOT.war
-          cd build
-          zip ROOT.zip ROOT.war
+          ls -l target/  # Debug: List files in target directory
+
+      - name: 📦 Create ROOT.zip
+        run: |
+          mkdir -p deploy
+          if ls target/*.war >/dev/null 2>&1; then
+            echo "✅ WAR file found in target/"
+            cp target/*.war deploy/ROOT.war
+            cd deploy
+            zip ROOT.zip ROOT.war
+            ls -l  # Debug: List files
+          else
+            echo "❌ ERROR: No WAR file found in target/"
+            exit 1
+          fi
+
+      - name: 🔍 Check if ROOT.zip exists before upload
+        run: |
+          if [ -f "deploy/ROOT.zip" ]; then
+            echo "✅ ROOT.zip found locally"
+          else
+            echo "❌ ERROR: ROOT.zip not found locally"
+            exit 1
+          fi
 
       - name: 🚀 Upload ROOT.zip to EC2
         uses: appleboy/scp-action@v0.1.6
@@ -36,10 +56,23 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "build/ROOT.zip"
-          target: "/home/${{ secrets.EC2_USER }}/deploy"
+          source: "deploy/ROOT.zip"
+          target: "~/deploy"
+          strip_components: 1
+          overwrite: true
+        env:
+          DEBUG: true
 
-      - name: ⚙️ SSH into EC2 and deploy WAR
+      - name: 🔍 Verify ROOT.zip on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            ls -l ~/deploy  # Debug: List contents of ~/deploy
+
+      - name: ⚙️ SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -49,26 +82,27 @@ jobs:
             set -e
             echo "✅ Starting remote deployment..."
 
-            # Define full path
-            ZIP_PATH="/home/${USER}/deploy/ROOT.zip"
+            echo "📁 Ensuring deploy directory exists..."
+            mkdir -p ~/deploy
+            ls -l ~/deploy  # Debug: List contents
 
-            echo "🔍 Checking if ROOT.zip was uploaded..."
-            if [ -f "$ZIP_PATH" ]; then
-              echo "✅ ROOT.zip found"
+            echo "🔍 Looking for uploaded ROOT.zip..."
+            if [ -f "/home/${USER}/deploy/ROOT.zip" ]; then
+              echo "✅ ROOT.zip found in /home/${USER}/deploy"
             else
-              echo "❌ ERROR: ROOT.zip not found at $ZIP_PATH"
+              echo "❌ ERROR: ROOT.zip not found in /home/${USER}/deploy"
               exit 1
             fi
 
             echo "📁 Moving ROOT.zip to /opt..."
-            sudo mv "$ZIP_PATH" /opt/ROOT.zip
+            sudo mv /home/${USER}/deploy/ROOT.zip /opt/ROOT.zip
 
-            echo "🔧 Installing dependencies..."
+            echo "🔧 Installing Java & tools..."
             sudo apt update -y
-            sudo apt install -y openjdk-11-jdk unzip curl wget
+            sudo apt install -y openjdk-17-jdk unzip curl wget
 
-            echo "🛠️ Setting up Tomcat if not already installed..."
             if [ ! -d /opt/tomcat ]; then
+              echo "⬇️ Installing Tomcat..."
               cd /opt
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xzf apache-tomcat-10.1.18.tar.gz
@@ -90,4 +124,4 @@ jobs:
             sleep 3
             sudo /opt/tomcat/bin/startup.sh
 
-            echo "✅ Deployment completed at $(date)"
+            echo "✅ Deployment complete at $(date)"
