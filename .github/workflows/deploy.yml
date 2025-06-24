@@ -32,41 +32,26 @@ jobs:
             set -e
 
             TOMCAT_DIR="/opt/tomcat"
-            TOMCAT_VERSION="10.1.18"
-
-            if [ ! -x "$TOMCAT_DIR/bin/startup.sh" ]; then
-              echo "⚙️ Installing Tomcat..."
-              cd /opt
-              sudo apt update
-              sudo apt install -y openjdk-17-jdk wget unzip curl
-              sudo wget https://archive.apache.org/dist/tomcat/tomcat-10/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz
-              sudo tar -xzf apache-tomcat-${TOMCAT_VERSION}.tar.gz
-              sudo mv apache-tomcat-${TOMCAT_VERSION} tomcat
-              sudo chmod +x ${TOMCAT_DIR}/bin/*.sh
-              echo "✅ Tomcat installed."
-            else
-              echo "✅ Tomcat already installed."
-            fi
 
             echo "📦 Preparing deployment..."
-            mkdir -p ${TOMCAT_DIR}/webapps/temp_root
-            rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
+            sudo mkdir -p ${TOMCAT_DIR}/webapps/temp_root
+            sudo rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
 
             echo "📥 Downloading ROOT.zip..."
-            wget -O ${TOMCAT_DIR}/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
+            sudo wget -O ${TOMCAT_DIR}/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
             echo "📂 Extracting WAR..."
-            unzip ${TOMCAT_DIR}/webapps/ROOT.zip -d ${TOMCAT_DIR}/webapps/temp_root
-            mkdir -p ${TOMCAT_DIR}/webapps/ROOT
+            sudo unzip ${TOMCAT_DIR}/webapps/ROOT.zip -d ${TOMCAT_DIR}/webapps/temp_root
+            sudo mkdir -p ${TOMCAT_DIR}/webapps/ROOT
             cd ${TOMCAT_DIR}/webapps/ROOT
-            jar -xvf ${TOMCAT_DIR}/webapps/temp_root/ROOT.war
+            sudo jar -xvf ${TOMCAT_DIR}/webapps/temp_root/ROOT.war
 
             echo "♻️ Restarting Tomcat..."
-            ${TOMCAT_DIR}/bin/shutdown.sh || true
+            sudo ${TOMCAT_DIR}/bin/shutdown.sh || true
             sleep 3
-            ${TOMCAT_DIR}/bin/startup.sh
+            sudo ${TOMCAT_DIR}/bin/startup.sh
 
-            echo "✅ Deployment completed at $(date)" >> /opt/deploy.log
+            echo "✅ Deployment completed at $(date)" | sudo tee -a /opt/deploy.log
             EOF
 
             echo "Running deploy.sh..."

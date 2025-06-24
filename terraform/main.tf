@@ -30,33 +30,39 @@ resource "aws_instance" "web" {
   security_groups = [aws_security_group.allow_ssh_http.name]
 
 user_data = <<-EOF
-              #!/bin/bash
-              set -e
+  #!/bin/bash
+  set -e
 
-              echo "🔧 Installing dependencies..."
-              apt update -y
-              apt install -y openjdk-17-jdk wget unzip curl -y
+  echo "Installing dependencies..."
+  apt update -y
+  apt install -y openjdk-17-jdk wget unzip curl
 
-              echo "📁 Creating required directories..."
-              mkdir -p /opt/tomcat/webapps/temp_root
+  echo "Creating required directories..."
+  mkdir -p /opt/tomcat/webapps/temp_root
 
-              echo "🔍 Ensuring 'jar' command is available..."
-              ln -sf /usr/lib/jvm/java-17-openjdk-amd64/bin/jar /usr/bin/jar || true
+  echo "Ensuring 'jar' command is available..."
+  ln -sf /usr/lib/jvm/java-17-openjdk-amd64/bin/jar /usr/bin/jar || true
 
-              echo "📦 Checking Tomcat installation..."
-              if [ ! -f /opt/tomcat/bin/startup.sh ]; then
-                echo "⬇️ Downloading Tomcat 10.1.18..."
-                cd /opt
-                rm -rf tomcat
-                wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
-                tar -xzf apache-tomcat-10.1.18.tar.gz
-                mv apache-tomcat-10.1.18 tomcat
-                chmod +x /opt/tomcat/bin/*.sh
-                echo "✅ Tomcat installed."
-              else
-                echo "✅ Tomcat already installed. Skipping..."
-              fi
- EOF
+  echo "Checking Tomcat installation..."
+  if [ ! -f /opt/tomcat/bin/startup.sh ]; then
+    echo "⬇️ Downloading Tomcat 10.1.18..."
+    cd /opt
+    rm -rf tomcat
+    wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
+    tar -xzf apache-tomcat-10.1.18.tar.gz
+    mv apache-tomcat-10.1.18 tomcat
+    chmod +x /opt/tomcat/bin/*.sh
+    rm apache-tomcat-10.1.18.tar.gz
+    chown -R ubuntu:ubuntu /opt/tomcat
+    echo "✅ Tomcat installed."
+  else
+    echo "✅ Tomcat already installed. Skipping..."
+  fi
+
+  echo "Starting Tomcat..."
+  /opt/tomcat/bin/startup.sh
+EOF
+
   tags = {
     Name = "JavaWebApp"
   }
