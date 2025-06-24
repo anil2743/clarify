@@ -1,4 +1,4 @@
-name: 🚀 CI/CD Deploy Java WebApp to EC2
+name: ~@ CI/CD Deploy Java WebApp to EC2
 
 on:
   push:
@@ -11,42 +11,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔍 Checkout Code
+      - name: ~M Checkout Code
         uses: actions/checkout@v3
 
-      - name: 📦 Deploy via SSH to EC2
+      - name: M-& Deploy via SSH to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "📁 Creating /opt..."
+            echo " ~A Creating /opt..."
             sudo mkdir -p /opt
 
-            echo "📜 Creating deploy.sh..."
+            echo " ~\\ Creating deploy.sh..."
             sudo tee /opt/deploy.sh > /dev/null << 'EOF'
             #!/bin/bash
             set -e
 
-            echo "🛠 Ensuring directories exist..."
-            mkdir -p /opt/tomcat/webapps
+            echo " M-  Ensuring temp_root exists..."
             mkdir -p /opt/tomcat/webapps/temp_root
 
-            echo "🧹 Cleaning previous deployment..."
+            echo " M-9 Cleaning previous deployment..."
             rm -rf /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/ROOT.zip /opt/tomcat/webapps/temp_root
 
-            echo "🌐 Downloading ROOT.zip..."
+            echo " ~P Downloading ROOT.zip..."
             wget -O /opt/tomcat/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
-            echo "📦 Extracting WAR..."
+            echo " M-& Extracting WAR..."
             unzip /opt/tomcat/webapps/ROOT.zip -d /opt/tomcat/webapps/temp_root
 
             mkdir -p /opt/tomcat/webapps/ROOT
             cd /opt/tomcat/webapps/ROOT
             jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
 
-            echo "🔁 Restarting Tomcat..."
+            echo " ~A Restarting Tomcat..."
             /opt/tomcat/bin/shutdown.sh || true
             sleep 3
             /opt/tomcat/bin/startup.sh
@@ -54,6 +53,6 @@ jobs:
             echo "✅ Deployed at \$(date)" >> /opt/deploy.log
             EOF
 
-            echo "🚀 Running deploy.sh..."
+            echo " ~@ Running deploy.sh..."
             sudo chmod +x /opt/deploy.sh
             sudo bash /opt/deploy.sh
