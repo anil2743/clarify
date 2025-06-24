@@ -29,6 +29,16 @@ jobs:
           cp target/*.war deploy/ROOT.war
           cd deploy
           zip ROOT.zip ROOT.war
+          ls -l  # Debug: List files
+
+      - name: 🔍 Check if ROOT.zip exists before upload
+        run: |
+          if [ -f "deploy/ROOT.zip" ]; then
+            echo "✅ ROOT.zip found locally"
+          else
+            echo "❌ ERROR: ROOT.zip not found locally"
+            exit 1
+          fi
 
       - name: 🚀 Upload ROOT.zip to EC2
         uses: appleboy/scp-action@v0.1.6
@@ -37,7 +47,10 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "deploy/ROOT.zip"
-          target: "/home/${{ secrets.EC2_USER }}/deploy"
+          target: "~/deploy"
+          overwrite: true
+        env:
+          DEBUG: true
 
       - name: ⚙️ SSH into EC2 and Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -49,23 +62,27 @@ jobs:
             set -e
             echo "✅ Starting remote deployment..."
 
-            echo "🔍 Checking if ROOT.zip was uploaded..."
-            if [ -f "/home/${USER:-ubuntu}/deploy/ROOT.zip" ]; then
-              echo "✅ ROOT.zip found"
+            echo "📁 Ensuring deploy directory exists..."
+            mkdir -p ~/deploy
+            ls -l ~/deploy  # Debug: List contents
+
+            echo "🔍 Looking for uploaded ROOT.zip..."
+            if [ -f "/home/${USER}/deploy/ROOT.zip" ]; then
+              echo "✅ ROOT.zip found in /home/${USER}/deploy"
             else
-              echo "❌ ERROR: ROOT.zip not found at /home/${USER:-ubuntu}/deploy/ROOT.zip"
+              echo "❌ ERROR: ROOT.zip not found in /home/${USER}/deploy"
               exit 1
             fi
 
             echo "📁 Moving ROOT.zip to /opt..."
-            sudo mv /home/${USER:-ubuntu}/deploy/ROOT.zip /opt/ROOT.zip
+            sudo mv /home/${USER}/deploy/ROOT.zip /opt/ROOT.zip
 
-            echo "🔧 Installing dependencies..."
+            echo "🔧 Installing Java & tools..."
             sudo apt update -y
-            sudo apt install -y openjdk-11-jdk unzip curl wget
+            sudo apt install -y openjdk-17-jdk unzip curl wget
 
-            echo "🛠️ Setting up Tomcat if not already installed..."
             if [ ! -d /opt/tomcat ]; then
+              echo "⬇️ Installing Tomcat..."
               cd /opt
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xzf apache-tomcat-10.1.18.tar.gz
@@ -73,7 +90,7 @@ jobs:
               chmod +x /opt/tomcat/bin/*.sh
             fi
 
-            echo "📦 Deploying WAR..."
+            echo "📦 Deploying WAR to Tomcat..."
             cd /opt/tomcat/webapps
             sudo rm -rf ROOT temp_root
             sudo mkdir temp_root
@@ -87,4 +104,4 @@ jobs:
             sleep 3
             sudo /opt/tomcat/bin/startup.sh
 
-            echo "✅ Deployment completed at $(date)"
+            echo "✅ Deployment complete at $(date)"
