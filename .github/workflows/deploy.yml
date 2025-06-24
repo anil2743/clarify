@@ -1,4 +1,4 @@
-name: ~@ CI/CD Deploy Java WebApp to EC2
+name: CI/CD Deploy Java WebApp to EC2
 
 on:
   push:
@@ -11,61 +11,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ~M Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: M-& Deploy via SSH to EC2
+      - name: Deploy via SSH to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            #!/bin/bash
+            set -e
+
             echo "Creating /opt directory..."
             sudo mkdir -p /opt
-
             echo "Writing deploy.sh script..."
-            sudo bash -c 'cat > /opt/deploy.sh' <<'EOF'
-#!/bin/bash
-set -e
+            sudo bash -c 'cat > /opt/deploy.sh' << 'EOF'
+            #!/bin/bash
+            set -e
 
-TOMCAT_DIR="/opt/tomcat"
-TOMCAT_VERSION="10.1.18"
+            TOMCAT_DIR="/opt/tomcat"
+            TOMCAT_VERSION="10.1.18"
 
-if [ ! -x "$TOMCAT_DIR/bin/startup.sh" ]; then
-  echo "⚙️ Installing Tomcat..."
-  cd /opt
-  sudo apt update
-  sudo apt install -y openjdk-17-jdk wget unzip curl
-  sudo wget https://archive.apache.org/dist/tomcat/tomcat-10/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz
-  sudo tar -xzf apache-tomcat-${TOMCAT_VERSION}.tar.gz
-  sudo mv apache-tomcat-${TOMCAT_VERSION} tomcat
-  sudo chmod +x ${TOMCAT_DIR}/bin/*.sh
-  echo "✅ Tomcat installed."
-else
-  echo "✅ Tomcat already installed."
-fi
+            if [ ! -x "$TOMCAT_DIR/bin/startup.sh" ]; then
+              echo "⚙️ Installing Tomcat..."
+              cd /opt
+              sudo apt update
+              sudo apt install -y openjdk-17-jdk wget unzip curl
+              sudo wget https://archive.apache.org/dist/tomcat/tomcat-10/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+              sudo tar -xzf apache-tomcat-${TOMCAT_VERSION}.tar.gz
+              sudo mv apache-tomcat-${TOMCAT_VERSION} tomcat
+              sudo chmod +x ${TOMCAT_DIR}/bin/*.sh
+              echo "✅ Tomcat installed."
+            else
+              echo "✅ Tomcat already installed."
+            fi
 
-echo "📦 Preparing deployment..."
-mkdir -p ${TOMCAT_DIR}/webapps/temp_root
-rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
+            echo "📦 Preparing deployment..."
+            mkdir -p ${TOMCAT_DIR}/webapps/temp_root
+            rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
 
-echo "📥 Downloading ROOT.zip..."
-wget -O ${TOMCAT_DIR}/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
+            echo "📥 Downloading ROOT.zip..."
+            wget -O ${TOMCAT_DIR}/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
-echo "📂 Extracting WAR..."
-unzip ${TOMCAT_DIR}/webapps/ROOT.zip -d ${TOMCAT_DIR}/webapps/temp_root
-mkdir -p ${TOMCAT_DIR}/webapps/ROOT
-cd ${TOMCAT_DIR}/webapps/ROOT
-jar -xvf ${TOMCAT_DIR}/webapps/temp_root/ROOT.war
+            echo "📂 Extracting WAR..."
+            unzip ${TOMCAT_DIR}/webapps/ROOT.zip -d ${TOMCAT_DIR}/webapps/temp_root
+            mkdir -p ${TOMCAT_DIR}/webapps/ROOT
+            cd ${TOMCAT_DIR}/webapps/ROOT
+            jar -xvf ${TOMCAT_DIR}/webapps/temp_root/ROOT.war
 
-echo "♻️ Restarting Tomcat..."
-${TOMCAT_DIR}/bin/shutdown.sh || true
-sleep 3
-${TOMCAT_DIR}/bin/startup.sh
+            echo "♻️ Restarting Tomcat..."
+            ${TOMCAT_DIR}/bin/shutdown.sh || true
+            sleep 3
+            ${TOMCAT_DIR}/bin/startup.sh
 
-echo "✅ Deployment completed at $(date)" >> /opt/deploy.log
-EOF
+            echo "✅ Deployment completed at $(date)" >> /opt/deploy.log
+            EOF
 
             echo "Running deploy.sh..."
             sudo chmod +x /opt/deploy.sh
