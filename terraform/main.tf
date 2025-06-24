@@ -29,7 +29,7 @@ resource "aws_instance" "web" {
   key_name      = var.key_name
   security_groups = [aws_security_group.allow_ssh_http.name]
 
-user_data = <<-EOF
+  user_data = <<-EOF
               #!/bin/bash
               set -e
 
@@ -40,7 +40,7 @@ user_data = <<-EOF
               apt update -y
               apt install -y openjdk-11-jdk wget unzip curl
 
-              # Ensure 'jar' is available (usually already is)
+              # Ensure 'jar' is available
               ln -s /usr/lib/jvm/java-11-openjdk-amd64/bin/jar /usr/bin/jar || true
 
               # Download and extract Apache Tomcat
@@ -49,41 +49,7 @@ user_data = <<-EOF
               tar -xvzf apache-tomcat-10.1.18.tar.gz
               mv apache-tomcat-10.1.18 tomcat
               chmod +x /opt/tomcat/bin/*.sh
-
-              # Now write the deploy.sh script properly
-              cat > /opt/deploy.sh << 'EODEPLOY'
-              #!/bin/bash
-              set -e
-
-              echo "🛠 Ensuring directories exist..."
-              mkdir -p /opt/tomcat/webapps/temp_root
-
-              echo "🧹 Cleaning previous deployment..."
-              rm -rf /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/ROOT.zip /opt/tomcat/webapps/temp_root
-
-              echo "🌐 Downloading ROOT.zip..."
-              wget -O /opt/tomcat/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
-
-              echo "📦 Extracting WAR..."
-              unzip /opt/tomcat/webapps/ROOT.zip -d /opt/tomcat/webapps/temp_root
-
-              mkdir -p /opt/tomcat/webapps/ROOT
-              cd /opt/tomcat/webapps/ROOT
-              jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
-
-              echo "🔁 Restarting Tomcat..."
-              /opt/tomcat/bin/shutdown.sh || true
-              sleep 3
-              /opt/tomcat/bin/startup.sh
-
-              echo "✅ Deployed at $(date)" >> /opt/deploy.log
-              EODEPLOY
-
-              # Make the script executable and run it
-              chmod +x /opt/deploy.sh
-              bash /opt/deploy.sh
               EOF
-
   tags = {
     Name = "JavaWebApp"
   }
