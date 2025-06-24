@@ -11,35 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: ✅ Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Java
+      - name: ☕ Set up Java
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build WAR using Maven
+      - name: 🛠️ Build WAR using Maven
         run: mvn clean package -DskipTests
 
-      - name: Create ROOT.zip
+      - name: 📦 Create ROOT.zip from WAR
         run: |
-          mkdir deploy
+          mkdir -p deploy
           cp target/*.war deploy/ROOT.war
           cd deploy
           zip ROOT.zip ROOT.war
 
-      - name: Upload ROOT.zip to EC2 (/tmp)
+      - name: 🚀 Upload ROOT.zip to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "deploy/ROOT.zip"
-          target: "/tmp/"
+          target: "~/deploy"
 
-      - name: SSH into EC2 and Deploy WAR
+      - name: 🔧 SSH into EC2 and deploy WAR
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -49,16 +49,20 @@ jobs:
             set -e
             echo "✅ Starting remote deployment..."
 
-            echo "🔍 Verifying upload..."
-            if [ -f "/tmp/ROOT.zip" ]; then
-              echo "✅ ROOT.zip exists on EC2"
+            echo "🔍 Looking for uploaded ROOT.zip..."
+            if [ -f "$HOME/deploy/ROOT.zip" ]; then
+              echo "✅ ROOT.zip found in $HOME/deploy"
+            elif [ -f "$HOME/ROOT.zip" ]; then
+              echo "✅ ROOT.zip found in $HOME"
+              mkdir -p $HOME/deploy
+              mv $HOME/ROOT.zip $HOME/deploy/ROOT.zip
             else
-              echo "❌ ERROR: ROOT.zip missing on EC2"
+              echo "❌ ERROR: ROOT.zip not found in EC2 home directory"
               exit 1
             fi
 
-            echo "📁 Moving ROOT.zip to /opt"
-            sudo mv /tmp/ROOT.zip /opt/ROOT.zip
+            echo "📁 Moving ROOT.zip to /opt..."
+            sudo mv $HOME/deploy/ROOT.zip /opt/ROOT.zip
 
             echo "🔧 Installing Java & tools..."
             sudo apt update -y
@@ -88,3 +92,4 @@ jobs:
             sudo /opt/tomcat/bin/startup.sh
 
             echo "✅ Deployment complete at $(date)"
+
