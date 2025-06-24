@@ -21,11 +21,11 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo " ~A Creating /opt directory..."
+            echo "Creating /opt directory..."
             sudo mkdir -p /opt
 
-            echo " ~\\ Writing deploy.sh script..."
-            sudo bash -c 'cat > /opt/deploy.sh << EOF
+            echo "Writing deploy.sh script..."
+            sudo bash -c 'cat > /opt/deploy.sh' <<'EOF'
 #!/bin/bash
 set -e
 
@@ -46,7 +46,7 @@ else
   echo "✅ Tomcat already installed."
 fi
 
-echo "📦 Preparing WAR deployment..."
+echo "📦 Preparing deployment..."
 mkdir -p ${TOMCAT_DIR}/webapps/temp_root
 rm -rf ${TOMCAT_DIR}/webapps/ROOT ${TOMCAT_DIR}/webapps/ROOT.zip ${TOMCAT_DIR}/webapps/temp_root
 
@@ -64,9 +64,9 @@ ${TOMCAT_DIR}/bin/shutdown.sh || true
 sleep 3
 ${TOMCAT_DIR}/bin/startup.sh
 
-echo "✅ Deployment done at \$(date)" >> /opt/deploy.log
-EOF'
+echo "✅ Deployment completed at $(date)" >> /opt/deploy.log
+EOF
 
-            echo " ~@ Running deploy.sh..."
+            echo "Running deploy.sh..."
             sudo chmod +x /opt/deploy.sh
             sudo bash /opt/deploy.sh
