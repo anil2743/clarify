@@ -33,31 +33,29 @@ user_data = <<-EOF
               #!/bin/bash
               set -e
 
-              # Create required directories
-              mkdir -p /opt
-              mkdir -p /opt/tomcat/webapps
+              # Create directories
+              mkdir -p /opt /opt/tomcat/webapps
 
               # Install Java and required tools
               apt update -y
               apt install -y openjdk-11-jdk wget unzip curl
 
-              # Install Apache Tomcat
+              # Ensure 'jar' is available (usually already is)
+              ln -s /usr/lib/jvm/java-11-openjdk-amd64/bin/jar /usr/bin/jar || true
+
+              # Download and extract Apache Tomcat
               cd /opt
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xvzf apache-tomcat-10.1.18.tar.gz
               mv apache-tomcat-10.1.18 tomcat
               chmod +x /opt/tomcat/bin/*.sh
 
-              # Install jar command (included with openjdk, but ensure it's available)
-              ln -s /usr/lib/jvm/java-11-openjdk-amd64/bin/jar /usr/bin/jar || true
-
-              # Create deploy.sh
-              cat << 'EOS' > /opt/deploy.sh
+              # Now write the deploy.sh script properly
+              cat > /opt/deploy.sh << 'EODEPLOY'
               #!/bin/bash
               set -e
 
               echo "🛠 Ensuring directories exist..."
-              mkdir -p /opt/tomcat/webapps
               mkdir -p /opt/tomcat/webapps/temp_root
 
               echo "🧹 Cleaning previous deployment..."
@@ -79,8 +77,9 @@ user_data = <<-EOF
               /opt/tomcat/bin/startup.sh
 
               echo "✅ Deployed at $(date)" >> /opt/deploy.log
-              EOS
+              EODEPLOY
 
+              # Make the script executable and run it
               chmod +x /opt/deploy.sh
               bash /opt/deploy.sh
               EOF
