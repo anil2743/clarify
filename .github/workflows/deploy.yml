@@ -46,9 +46,29 @@ jobs:
             jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
 
             echo " ~A Restarting Tomcat..."
-            /opt/tomcat/bin/shutdown.sh || true
-            sleep 3
-            /opt/tomcat/bin/startup.sh
+            if [[ -x /opt/tomcat/bin/startup.sh && -x /opt/tomcat/bin/shutdown.sh ]]; then
+                /opt/tomcat/bin/shutdown.sh || true
+                sleep 3
+                /opt/tomcat/bin/startup.sh
+            else
+                echo "❌ Tomcat not ready yet. Waiting..."
+                for i in {1..6}; do
+                  if [[ -x /opt/tomcat/bin/startup.sh && -x /opt/tomcat/bin/shutdown.sh ]]; then
+                    echo "✅ Tomcat is now available. Restarting..."
+                    /opt/tomcat/bin/shutdown.sh || true
+                    sleep 3
+                    /opt/tomcat/bin/startup.sh
+                    break
+                  else
+                    echo "⏳ Still waiting... (${i}/6)"
+                    sleep 10
+                  fi
+                done
+                if [[ ! -x /opt/tomcat/bin/startup.sh ]]; then
+                  echo "❌ ERROR: Tomcat scripts not found after waiting. Aborting."
+                  exit 1
+                fi
+            fi
 
             echo "✅ Deployed at \$(date)" >> /opt/deploy.log
             EOF
