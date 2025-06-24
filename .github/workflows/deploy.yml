@@ -50,7 +50,7 @@ jobs:
             echo "✅ Starting remote deployment..."
 
             # Move uploaded zip to /opt
-            sudo mv ~/ROOT.zip /opt/ROOT.zip
+              mv ~/ROOT.zip /opt/ROOT.zip
 
             # Install Java, unzip, curl if not already
             sudo apt update -y
