@@ -29,46 +29,40 @@ jobs:
             #!/bin/bash
             set -e
 
-            echo " M-  Ensuring temp_root exists..."
-            mkdir -p /opt/tomcat/webapps/temp_root
+            TOMCAT_DIR="/opt/tomcat"
+            TOMCAT_VERSION="10.1.27"
 
-            echo " M-9 Cleaning previous deployment..."
+            if [ ! -x "\$TOMCAT_DIR/bin/startup.sh" ]; then
+              echo "⚙️ Tomcat not found, installing..."
+              cd /opt
+              sudo apt update
+              sudo apt install -y openjdk-17-jdk wget unzip
+              sudo wget https://downloads.apache.org/tomcat/tomcat-10/v\$TOMCAT_VERSION/bin/apache-tomcat-\$TOMCAT_VERSION.tar.gz
+              sudo tar -xzf apache-tomcat-\$TOMCAT_VERSION.tar.gz
+              sudo mv apache-tomcat-\$TOMCAT_VERSION tomcat
+              sudo chmod +x /opt/tomcat/bin/*.sh
+              echo "✅ Tomcat \$TOMCAT_VERSION installed."
+            else
+              echo "✅ Tomcat already installed."
+            fi
+
+            echo "📦 Preparing deployment..."
+            mkdir -p /opt/tomcat/webapps/temp_root
             rm -rf /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/ROOT.zip /opt/tomcat/webapps/temp_root
 
-            echo " ~P Downloading ROOT.zip..."
+            echo "📥 Downloading ROOT.zip..."
             wget -O /opt/tomcat/webapps/ROOT.zip "https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip"
 
-            echo " M-& Extracting WAR..."
+            echo "📂 Extracting WAR..."
             unzip /opt/tomcat/webapps/ROOT.zip -d /opt/tomcat/webapps/temp_root
-
             mkdir -p /opt/tomcat/webapps/ROOT
             cd /opt/tomcat/webapps/ROOT
             jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
 
-            echo " ~A Restarting Tomcat..."
-            if [[ -x /opt/tomcat/bin/startup.sh && -x /opt/tomcat/bin/shutdown.sh ]]; then
-                /opt/tomcat/bin/shutdown.sh || true
-                sleep 3
-                /opt/tomcat/bin/startup.sh
-            else
-                echo "❌ Tomcat not ready yet. Waiting..."
-                for i in {1..6}; do
-                  if [[ -x /opt/tomcat/bin/startup.sh && -x /opt/tomcat/bin/shutdown.sh ]]; then
-                    echo "✅ Tomcat is now available. Restarting..."
-                    /opt/tomcat/bin/shutdown.sh || true
-                    sleep 3
-                    /opt/tomcat/bin/startup.sh
-                    break
-                  else
-                    echo "⏳ Still waiting... (${i}/6)"
-                    sleep 10
-                  fi
-                done
-                if [[ ! -x /opt/tomcat/bin/startup.sh ]]; then
-                  echo "❌ ERROR: Tomcat scripts not found after waiting. Aborting."
-                  exit 1
-                fi
-            fi
+            echo "🔁 Restarting Tomcat..."
+            /opt/tomcat/bin/shutdown.sh || true
+            sleep 3
+            /opt/tomcat/bin/startup.sh
 
             echo "✅ Deployed at \$(date)" >> /opt/deploy.log
             EOF
