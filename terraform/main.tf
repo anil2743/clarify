@@ -1,5 +1,3 @@
-
-
 resource "aws_security_group" "allow_ssh_http" {
   name_prefix = "allow-ssh-http-"
 
@@ -34,8 +32,10 @@ resource "aws_instance" "web" {
   user_data_replace_on_change = true
   user_data = <<-EOF
               #!/bin/bash
+              set -e  # Exit script on error
+
               apt update -y
-              apt install -y openjdk-11-jdk wget unzip
+              apt install -y openjdk-11-jdk wget unzip curl
 
               cd /opt
               wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.83/bin/apache-tomcat-9.0.83.tar.gz
@@ -43,9 +43,14 @@ resource "aws_instance" "web" {
               mv apache-tomcat-9.0.83 tomcat
               chmod +x /opt/tomcat/bin/*.sh
 
+              # Download WAR
               wget https://github.com/anil2743/clarify/releases/latest/download/ROOT.war -O /opt/tomcat/webapps/ROOT.war
 
+              # Start Tomcat in background
               /opt/tomcat/bin/startup.sh
+
+              # Write status to log
+              echo "Tomcat started!" >> /var/log/tomcat-setup.log
               EOF
 
   tags = {
