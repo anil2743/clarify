@@ -1,6 +1,6 @@
 resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
-  public_key = file("${path.module}/terraform.pub")
+  public_key = file("${path.module}/terraform1.pub")
 }
 
 resource "aws_security_group" "allow_ssh_http" {
@@ -62,5 +62,4 @@ resource "aws_instance" "web" {
 
 resource "aws_eip" "web_eip" {
   instance = aws_instance.web.id
-  vpc      = true
 }
