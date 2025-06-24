@@ -25,23 +25,23 @@ jobs:
             sudo mkdir -p /opt
 
             echo " ~\\ Creating deploy.sh..."
-            sudo tee /opt/deploy.sh > /dev/null <<EOF
+            sudo bash -c 'cat > /opt/deploy.sh' << 'EOSCRIPT'
             #!/bin/bash
             set -e
 
             TOMCAT_DIR="/opt/tomcat"
             TOMCAT_VERSION="10.1.18"
 
-            if [ ! -x "\$TOMCAT_DIR/bin/startup.sh" ]; then
+            if [ ! -x "$TOMCAT_DIR/bin/startup.sh" ]; then
               echo "⚙️ Tomcat not found, installing..."
               cd /opt
               sudo apt update
               sudo apt install -y openjdk-17-jdk wget unzip
-              sudo wget https://downloads.apache.org/tomcat/tomcat-10/v\$TOMCAT_VERSION/bin/apache-tomcat-\$TOMCAT_VERSION.tar.gz
-              sudo tar -xzf apache-tomcat-\$TOMCAT_VERSION.tar.gz
-              sudo mv apache-tomcat-\$TOMCAT_VERSION tomcat
+              sudo wget https://downloads.apache.org/tomcat/tomcat-10/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz
+              sudo tar -xzf apache-tomcat-$TOMCAT_VERSION.tar.gz
+              sudo mv apache-tomcat-$TOMCAT_VERSION tomcat
               sudo chmod +x /opt/tomcat/bin/*.sh
-              echo "✅ Tomcat \$TOMCAT_VERSION installed."
+              echo "✅ Tomcat $TOMCAT_VERSION installed."
             else
               echo "✅ Tomcat already installed."
             fi
@@ -64,8 +64,8 @@ jobs:
             sleep 3
             /opt/tomcat/bin/startup.sh
 
-            echo "✅ Deployed at \$(date)" >> /opt/deploy.log
-EOF
+            echo "✅ Deployed at $(date)" >> /opt/deploy.log
+            EOSCRIPT
 
             echo " ~@ Running deploy.sh..."
             sudo chmod +x /opt/deploy.sh
