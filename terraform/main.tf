@@ -47,7 +47,7 @@ resource "aws_instance" "web" {
               cd /opt
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xvzf apache-tomcat-10.1.18.tar.gz
-              mv apache-tomcat-10.1.18 tomcat
+              mv apache-tomcat-10.1.18 /opt/tomcat
               chmod +x /opt/tomcat/bin/*.sh
               EOF
   tags = {
