@@ -61,6 +61,5 @@ sleep 3
 
 echo "✅ Deployment complete at $(date)"
 EOF
-
             sudo chmod +x /opt/deploy.sh
             sudo /opt/deploy.sh
