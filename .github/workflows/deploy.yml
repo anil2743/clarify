@@ -7,49 +7,67 @@ on:
 
 jobs:
   deploy:
-    name: Deploy WAR to EC2
+    name: Build and Deploy WAR to EC2
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Upload and run deploy.sh on EC2
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Build WAR using Maven
+        run: mvn clean package -DskipTests
+
+      - name: Create ROOT.zip
+        run: |
+          mkdir deploy
+          cp target/*.war deploy/ROOT.war
+          cd deploy
+          zip ROOT.zip ROOT.war
+
+      - name: Upload ROOT.zip to EC2
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy/ROOT.zip"
+          target: "/opt/ROOT.zip"
+
+      - name: SSH into EC2 and deploy WAR
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo mkdir -p /opt
-            sudo bash -c 'cat > /opt/deploy.sh' << 'EOF'
-            #!/bin/bash
             set -e
+            echo "✅ Starting remote deployment..."
 
-            echo "🔧 Installing dependencies..."
+            # Install Java and other tools if missing
             sudo apt update -y
             sudo apt install -y openjdk-11-jdk wget unzip curl
 
-            echo "📦 Downloading and installing Tomcat 10.1.18..."
-            cd /opt
-            if [ -d "/opt/tomcat" ]; then
-              sudo rm -rf /opt/tomcat
+            # Setup Tomcat
+            if [ ! -d /opt/tomcat ]; then
+              echo "⬇️ Installing Tomcat..."
+              cd /opt
+              wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
+              tar -xzf apache-tomcat-10.1.18.tar.gz
+              mv apache-tomcat-10.1.18 tomcat
+              chmod +x /opt/tomcat/bin/*.sh
             fi
-            wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
-            tar -xvzf apache-tomcat-10.1.18.tar.gz
-            mv apache-tomcat-10.1.18 tomcat
-            chmod +x /opt/tomcat/bin/*.sh
 
-            echo "🧹 Cleaning previous deployment..."
+            # Deploy WAR
+            echo "📦 Deploying WAR..."
             cd /opt/tomcat/webapps
             rm -rf ROOT ROOT.zip temp_root
-            mkdir -p temp_root
-
-            echo "📥 Downloading ROOT.zip from GitHub..."
-            wget -O ROOT.zip https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip
-
-            echo "📂 Extracting WAR from ROOT.zip..."
-            unzip ROOT.zip -d temp_root
+            unzip /opt/ROOT.zip -d temp_root
             mkdir -p ROOT
             cd ROOT
             jar -xvf ../temp_root/ROOT.war
@@ -60,6 +78,3 @@ jobs:
             /opt/tomcat/bin/startup.sh
 
             echo "✅ Deployment complete at $(date)"
-            EOF
-            sudo chmod +x /opt/deploy.sh
-            sudo /opt/deploy.sh
