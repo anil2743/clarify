@@ -29,7 +29,7 @@ resource "aws_instance" "web" {
   key_name      = var.key_name
   security_groups = [aws_security_group.allow_ssh_http.name]
 
-  user_data = <<-EOF
+user_data = <<-EOF
               #!/bin/bash
               set -e
 
@@ -41,27 +41,6 @@ resource "aws_instance" "web" {
               tar -xvzf apache-tomcat-10.1.18.tar.gz
               mv apache-tomcat-10.1.18 tomcat
               chmod +x /opt/tomcat/bin/*.sh
-
-              # Add deployment script
-              cat << 'EOS' > /opt/deploy.sh
-              #!/bin/bash
-              set -e
-
-              rm -rf /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/ROOT.zip /opt/tomcat/webapps/temp_root
-              wget https://github.com/anil2743/clarify/releases/download/v1.0/ROOT.zip -O /opt/tomcat/webapps/ROOT.zip
-              mkdir /opt/tomcat/webapps/temp_root
-              unzip /opt/tomcat/webapps/ROOT.zip -d /opt/tomcat/webapps/temp_root
-              mkdir /opt/tomcat/webapps/ROOT
-              cd /opt/tomcat/webapps/ROOT
-              jar -xvf /opt/tomcat/webapps/temp_root/ROOT.war
-              /opt/tomcat/bin/shutdown.sh || true
-              sleep 3
-              /opt/tomcat/bin/startup.sh
-              echo "Deployed via CI/CD" >> /opt/deploy.log
-              EOS
-
-              chmod +x /opt/deploy.sh
-              bash /opt/deploy.sh
               EOF
 
   tags = {
