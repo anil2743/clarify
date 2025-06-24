@@ -7,38 +7,39 @@ on:
 
 jobs:
   deploy:
+    name: Build and Deploy WAR to EC2
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
 
-      - name: ☕ Set up Java
+      - name: ☕ Set up Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🧱 Build WAR
+      - name: 🧱 Build WAR using Maven
         run: mvn clean package -DskipTests
 
-      - name: 📦 Create ROOT.zip
+      - name: 📦 Prepare deployable ROOT.zip
         run: |
-          mkdir -p deploy
-          cp target/*.war deploy/ROOT.war
-          cd deploy
+          mkdir -p build
+          cp target/*.war build/ROOT.war
+          cd build
           zip ROOT.zip ROOT.war
 
-      - name: 🚀 Upload to EC2
+      - name: 🚀 Upload ROOT.zip to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "deploy/ROOT.zip"
-          target: "deploy/"   # ✅ relative = /home/ubuntu/deploy
+          source: "build/ROOT.zip"
+          target: "/home/${{ secrets.EC2_USER }}/deploy"
 
-      - name: ⚙️ SSH into EC2 and Deploy
+      - name: ⚙️ SSH into EC2 and deploy WAR
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -48,23 +49,26 @@ jobs:
             set -e
             echo "✅ Starting remote deployment..."
 
+            # Define full path
+            ZIP_PATH="/home/${USER}/deploy/ROOT.zip"
+
             echo "🔍 Checking if ROOT.zip was uploaded..."
-            if [ -f "/home/ubuntu/deploy/ROOT.zip" ]; then
+            if [ -f "$ZIP_PATH" ]; then
               echo "✅ ROOT.zip found"
             else
-              echo "❌ ERROR: ROOT.zip not found at /home/ubuntu/deploy"
+              echo "❌ ERROR: ROOT.zip not found at $ZIP_PATH"
               exit 1
             fi
 
-            echo "📁 Moving to /opt..."
-            sudo mv /home/ubuntu/deploy/ROOT.zip /opt/ROOT.zip
+            echo "📁 Moving ROOT.zip to /opt..."
+            sudo mv "$ZIP_PATH" /opt/ROOT.zip
 
-            echo "🔧 Installing Java, unzip, curl..."
+            echo "🔧 Installing dependencies..."
             sudo apt update -y
             sudo apt install -y openjdk-11-jdk unzip curl wget
 
+            echo "🛠️ Setting up Tomcat if not already installed..."
             if [ ! -d /opt/tomcat ]; then
-              echo "⬇️ Installing Tomcat..."
               cd /opt
               wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.18.tar.gz
               tar -xzf apache-tomcat-10.1.18.tar.gz
@@ -72,12 +76,12 @@ jobs:
               chmod +x /opt/tomcat/bin/*.sh
             fi
 
-            echo "📦 Deploying WAR..."
+            echo "📦 Deploying WAR to Tomcat..."
             cd /opt/tomcat/webapps
             sudo rm -rf ROOT temp_root
             sudo mkdir temp_root
             sudo unzip /opt/ROOT.zip -d temp_root
-            sudo mkdir ROOT
+            sudo mkdir -p ROOT
             cd ROOT
             sudo jar -xvf ../temp_root/ROOT.war
 
@@ -86,4 +90,4 @@ jobs:
             sleep 3
             sudo /opt/tomcat/bin/startup.sh
 
-            echo "✅ Deployment complete at $(date)"
+            echo "✅ Deployment completed at $(date)"
