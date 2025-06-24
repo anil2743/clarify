@@ -3,5 +3,5 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  default = "terraform1"
+  default = "terraform2"
 }
